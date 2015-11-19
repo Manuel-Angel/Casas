@@ -31,38 +31,84 @@ and open the template in the editor.
                 echo $result."<br>";
             }*/
             /*iniciar sesion*/
-            $usuario = Usuario::iniciarSesion("Manuel Angel Muñoz Solano1", "1234");
+            /*$usuario = Usuario::iniciarSesion("Manuel Angel Muñoz Solano", "1234");
             if($usuario instanceof ParseUser){
                 echo 'Bienvenido ' . $usuario->getUsername() ."<br>";
             }else {
                 echo $usuario."<br>";
-            }
+            }*/
             /*Usar el usuario logeado*/
-            $actual= Usuario::usuarioActual();
+            /*$actual= Usuario::usuarioActual();
             if($actual!=null){
-                echo "El usuario actual es ".$actual->getUserName()." correo: ".$actual->get("email");
-            }else {echo "Ningun usuario conectado";}
-            /*cerrar sesion*/
-            Usuario::cerrarSesion();
-                    
+                echo "El usuario actual es ".$actual->getUserName()." correo: ".$actual->get("email")."<br>";
+            }else {echo "Ningun usuario conectado<br>";}
+            /*cerrar sesion
+            Usuario::cerrarSesion();*/
             
-            /*todos los usuarios */
-            $consulta= new ParseQuery("_User");
-            $consulta->equalTo("tipo",1);
-            try{
-                $objetos=$consulta->find();
-            } catch (ParseException $ex) {
-                echo "balio berga ". $ex;
-            }
-            
-            echo "se encontraron " . count($objetos). " resultados <br>";
-            
-            for($i=0;$i<count($objetos);$i++){
-                echo $objetos[$i]->getObjectId()." ".$objetos[$i]->get("foo")."<br>";
-                //$objetos[$i]->destroy();
-            }
             //$objeto= $consulta->get("Dxl8ifn73z");
             //$objeto->destroy();
+            
+            muestraUsuarios();
+            //calificaUsuario();
+            getCalificacionUsuario();
+            function guardaImagenRelacion(){
+                $consulta= new ParseQuery("Inmueble");
+                $inmueble = $consulta->get("Wkz7fvW6qG");
+                $consulta= new ParseQuery("Imagenes");
+                $imagen= $consulta->first();        
+                $relacion= $inmueble->getRelation("imagenes");
+                $relacion->add($imagen);
+                $inmueble->save();
+            }
+            function calificaUsuario(){
+                $query = new ParseQuery("_User");
+                $usuario =  $query->get("X8gPmNBW1R");
+                $usuarioCalificado= $query->get("xfRgPRI2Ta");
+                Usuario::calificaUsuario($usuario,$usuarioCalificado, 6);
+            }
+            function getCalificacionUsuario(){
+                $query = new ParseQuery("_User");
+                $usuario= $query->get("xfRgPRI2Ta");
+                $calif= Usuario::getCalificacionUsuario($usuario);
+                echo "El usuario ".$usuario->get("username");
+                if($calif==null){
+                    echo " no tiene calificaciones<br>";
+                }else{
+                    echo " tiene la calificacion de ". $calif. " <br>";
+                }
+                
+            }
+            function consultaVariasImagenes(){
+                $consulta= new ParseQuery("Imagenes");
+                $objetos= $consulta->find();
+                for($i=0;$i<count($objetos);$i++){
+                    echo "<img src= ". $objetos[$i]->get("imagen")->getUrl() . " > <br>";
+                    //$objetos[$i]->destroy();
+                }
+            }
+            function getImagenesInmuebles(){
+                $consulta= new ParseQuery("Inmueble");
+                $inmueble = $consulta->get("ECBYtmXxj6");
+                Inmueble::getImagenesInmueble($inmueble);
+            }
+            function muestraUsuarios(){
+                $consulta= new ParseQuery("_User");
+                $consulta->equalTo("tipo",1);
+                try{
+                    $objetos=$consulta->find();
+                } catch (ParseException $ex) {
+                    echo "No funciono ". $ex;
+                }
+                echo "se encontraron " . count($objetos). " resultados <br>";
+                for($i=0;$i<count($objetos);$i++){
+                    echo $objetos[$i]->get("username")."<br>";
+                    //$objetos[$i]->destroy();
+                }
+            }
+            function migraImagenes(){
+                Inmueble::migrarImagenes();
+                //Inmueble::migrarImagenesInmueble($inmueble);
+            }
         ?>
     </body>
 </html>
