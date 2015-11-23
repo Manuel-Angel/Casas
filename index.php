@@ -30,13 +30,7 @@ and open the template in the editor.
             }else {
                 echo $result."<br>";
             }*/
-            /*iniciar sesion*/
-            /*$usuario = Usuario::iniciarSesion("Manuel Angel Muñoz Solano", "1234");
-            if($usuario instanceof ParseUser){
-                echo 'Bienvenido ' . $usuario->getUsername() ."<br>";
-            }else {
-                echo $usuario."<br>";
-            }*/
+           
             /*Usar el usuario logeado*/
             /*$actual= Usuario::usuarioActual();
             if($actual!=null){
@@ -49,8 +43,31 @@ and open the template in the editor.
             //$objeto->destroy();
             
             muestraUsuarios();
-            //calificaUsuario();
-            getCalificacionUsuario();
+            //calificaUsuario(); innercircle1
+            //getCalificacionUsuario(); luzvivanco1#
+            //solicitaCasa();
+            
+            notificacionesArrendador();
+            autorizarContactos();
+            function autorizarContactos(){
+                iniciaSesion();
+                $query = new ParseQuery("Inmueble");
+                $inmueble = $query->get("ECBYtmXxj6");
+                User::autorizarContacto($inmueble);
+            }
+            function notificacionesArrendador(){
+                $query = new ParseQuery("_User");
+                $user= $query->get("LLLdzjvZ44"); 
+                User::getNotificacionesArrendador($user);
+            }
+            function solicitaCasa(){
+                $query = new ParseQuery("Inmueble");
+                $inmueble = $query->get("ECBYtmXxj6");
+                $query = new ParseQuery("_User");
+                $user= $query->get("p4Zy5A64pY"); 
+                $resp= User::usuarioSolicitaCasa($user, $inmueble);
+                echo $resp;
+            }
             function guardaImagenRelacion(){
                 $consulta= new ParseQuery("Inmueble");
                 $inmueble = $consulta->get("Wkz7fvW6qG");
@@ -64,12 +81,12 @@ and open the template in the editor.
                 $query = new ParseQuery("_User");
                 $usuario =  $query->get("X8gPmNBW1R");
                 $usuarioCalificado= $query->get("xfRgPRI2Ta");
-                Usuario::calificaUsuario($usuario,$usuarioCalificado, 6);
+                User::calificaUsuario($usuario,$usuarioCalificado, 6);
             }
             function getCalificacionUsuario(){
                 $query = new ParseQuery("_User");
                 $usuario= $query->get("xfRgPRI2Ta");
-                $calif= Usuario::getCalificacionUsuario($usuario);
+                $calif= User::getCalificacionUsuario($usuario);
                 echo "El usuario ".$usuario->get("username");
                 if($calif==null){
                     echo " no tiene calificaciones<br>";
@@ -93,7 +110,7 @@ and open the template in the editor.
             }
             function muestraUsuarios(){
                 $consulta= new ParseQuery("_User");
-                $consulta->equalTo("tipo",1);
+                //$consulta->equalTo("tipo",1);
                 try{
                     $objetos=$consulta->find();
                 } catch (ParseException $ex) {
@@ -103,6 +120,15 @@ and open the template in the editor.
                 for($i=0;$i<count($objetos);$i++){
                     echo $objetos[$i]->get("username")."<br>";
                     //$objetos[$i]->destroy();
+                }
+            }
+             /*iniciar sesion*/
+            function iniciaSesion(){
+                $usuario = User::iniciarSesion("Manuel Angel Muñoz Solano", "1234");
+                if($usuario instanceof ParseUser){
+                    echo '<br>Bienvenido ' . $usuario->getUsername() ."<br>";
+                }else {
+                    echo $usuario."<br>";
                 }
             }
             function migraImagenes(){
