@@ -196,7 +196,7 @@ class User {
         $email->SMTPAuth = true;                          
         //Provide username and password     
         $email->Username = "manu.ang6587@gmail.com"; /*cambiar esto, si pones tu cuenta de google te dira que bloqueo esta aplicacion, tienes que activar el uso de aplicaciones no seguras para que esto jale*/
-        $email->Password = "waitforit...";  
+        $email->Password = "";  
         //If SMTP requires TLS encryption then set it
         $email->SMTPSecure = "tls";
         //Set TCP port to connect to 
@@ -284,6 +284,7 @@ class User {
             User::enviarNotificacion($mail,$asunto,$txt);
             echo "se envio correo informativo a ". $mail. " con el contenido: <br>". $txt." <br>";
             $res[$i]->set("validado", true);
+            $res[$i]->save();
         }
     }
     /**

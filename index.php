@@ -46,9 +46,9 @@ and open the template in the editor.
             //calificaUsuario(); innercircle1
             //getCalificacionUsuario(); luzvivanco1#
             //solicitaCasa();
-            
-            notificacionesArrendador();
-            autorizarContactos();
+            getImagenesInmuebles();
+            //notificacionesArrendador();
+            //autorizarContactos();
             function autorizarContactos(){
                 iniciaSesion();
                 $query = new ParseQuery("Inmueble");
