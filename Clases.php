@@ -93,7 +93,7 @@ class User {
      * @param type $usuarioCalificado a quien se le asignara la calificacion
      * @param type $calificacion la calificacion a asignar
      */
-    public function calificaUsuario($usuario, $usuarioCalificado, $calificacion){
+    public static function calificaUsuario($usuario, $usuarioCalificado, $calificacion){
         $calificacionAct=User::existeCalificacion($usuario, $usuarioCalificado);
         if ($calificacionAct!=null) {
             $calificacionAct->destroy();
@@ -112,7 +112,7 @@ class User {
      * @param type $usuarioC
      * @return type
      */
-    private function existeCalificacion($usuario,$usuarioC){
+    private static function existeCalificacion($usuario,$usuarioC){
         $query = new ParseQuery("Calificaciones");
         $query ->equalTo("idUsuario", $usuario);
         $query ->equalTo("idUsuarioCalificado", $usuarioC);
@@ -127,7 +127,7 @@ class User {
      * @param type $usuario
      * @return type
      */
-    public function getCalificacionUsuario($usuario){
+    public static function getCalificacionUsuario($usuario){
         $query = new ParseQuery("Calificaciones");
         $query ->equalTo("idUsuarioCalificado", $usuario);
         $calif= $query->find();
@@ -152,7 +152,7 @@ class User {
      * @param type $inmueble
      * @return string
      */
-    public function usuarioSolicitaCasa($usuario, $inmueble){
+    public static function usuarioSolicitaCasa($usuario, $inmueble){
         if(User::yaSolicito($usuario, $inmueble)){
             return "Ya solicitaste los datos de este inmueble";
         }
@@ -160,10 +160,10 @@ class User {
         $arrendador->fetch();
         //echo " arrendador ". $arrendador->get("username") ."<br>";
         
-        $mail= $usuario->get("email");
+        $mail= $arrendador->get("email");
         $asunto= "Tienes un cliente en confort house!";
-        $txt= "Hola ". $usuario->get("username")."! Nos es grato informarte que te hemos conseguido\n"
-            ." un cliente esperando contactarse contigo para rentar/comprar tu casa en "
+        $txt= "Hola ". $arrendador->get("username")."! Nos es grato informarte que te hemos conseguido\n"
+            ." un cliente esperando contactarse contigo para rentar/comprar tu casa que se encuentra en "
             .$inmueble->get("direccion").".\nPara ponerte en contacto con el entra ya a conforthouse!.\n";
         
         echo "<br>".$mail. "<br>";
@@ -184,7 +184,7 @@ class User {
      * @param type $usuario
      * @param type $inmueble
      */
-    private function enviarNotificacion($mail,$asunto,$txt){
+    private static function enviarNotificacion($mail,$asunto,$txt){
         $email = new PHPMailer;
         //Enable SMTP debugging. 
         $email->SMTPDebug = 0;                               
@@ -196,7 +196,7 @@ class User {
         $email->SMTPAuth = true;                          
         //Provide username and password     
         $email->Username = "manu.ang6587@gmail.com"; /*cambiar esto, si pones tu cuenta de google te dira que bloqueo esta aplicacion, tienes que activar el uso de aplicaciones no seguras para que esto jale*/
-        $email->Password = "";  
+        $email->Password = "";   //https://www.google.com/settings/security/lesssecureapps
         //If SMTP requires TLS encryption then set it
         $email->SMTPSecure = "tls";
         //Set TCP port to connect to 
@@ -219,7 +219,7 @@ class User {
      * @param type $inmueble
      * @return boolean
      */
-    private function yaSolicito($usuario, $inmueble){
+    private static function yaSolicito($usuario, $inmueble){
         $peticion =  new ParseQuery("UsuarioVeDatosCasa");
         $peticion->equalTo("idUsuario", $usuario);
         $peticion->equalTo("idInmueble", $inmueble);
@@ -234,24 +234,80 @@ class User {
      * en forma de relacion de la tabla UsuarioVeDatosCasa, contiene idInmueble
      * (el inmueble que le intereso al usuario), idUsuario (el usuario interesado),
      * y arrendador (el usuario dueño del inmueble).
-     * @param type $arrendador
+     * @param type $usuario
      * @return type
      */
-    public function getNotificacionesArrendador($arrendador){
-        $query =  new ParseQuery("UsuarioVeDatosCasa");
-        $query->equalTo("arrendador", $arrendador);
-        $query->equalTo("validado",false);
-        $query->ascending("idUsuario"); //importante
-        $res= $query->find();
+    public static function getNotificaciones($usuario){
+        $queryArrendador =  new ParseQuery("UsuarioVeDatosCasa"); //si el usuario puso en renta una casa, se le devuelve informacion al respecto
+        $queryArrendador->equalTo("arrendador", $usuario);
+        //$queryArrendador->equalTo("validado",false); //se le devuelven las que no estan validadas para que sepa que las tiene que validar
+        $queryArrendador->ascending("idInmueble"); //importante
+        
+        $queryCliente= new ParseQuery("UsuarioVeDatosCasa"); //si el usuario solicito una casa y ya estan listos los datos se le envian
+        $queryCliente->equalTo("idUsuario", $usuario);
+        $queryCliente->equalTo("validado", true);
+        
+        $mainQuery = ParseQuery::orQueries([$queryArrendador,$queryCliente]);
+        $mainQuery ->descending("createdAt");
+        $res= $mainQuery->find();
         $fin= count($res);
+        $inmuebleAct=null;
+        $nNoti=0;
+        $notificaciones=[];
         for($i=0;$i<$fin;$i++){ 
-            $user= $res[$i]->get("idUsuario");
+            $arrendador=$res[$i]->get("arrendador");
+            $arrendador->fetch();
             $inm = $res[$i]->get("idInmueble");
-            $user->fetch(); $inm->fetch(); //imprimo el usuario con fines de debugeo, cuando se le notifique al arrendador no se le mostrara quien es
-            echo "El usuario ". $user->get("username"). " se interesa en la casa que esta en "; //para evitar que se contacten entre ellos
-            echo $inm->get("direccion").". <br>"; //solo se mostrara que alguien quiere rentar esa casa
+            $inm->fetch();
+            if($arrendador == $usuario){ //si el usuario es arrendador y tiene un cliente nuevo ***
+                if($res[$i]->get("validado")){
+                    $user= $res[$i]->get("idUsuario");
+                    $user->fetch();
+                    $mensaje= "Ahora puedes ponerte en contacto con el usuario ". $user->get("username"). 
+                            "que se interesa en la casa que esta en ".$inm->get("direccion").". <br>"; 
+                    $mensaje.="Puedes contactar al usuario con el correo: ".$user->get("email").".<br>";
+                    echo $mensaje;
+                    $notificaciones[]=new Notificacion($mensaje,Notificacion::CONTACTO_NUEVO,$inm);
+                }else{
+                    if($inmuebleAct!=null && $inm->getObjectId() === $inmuebleAct->getObjectId()){ //no usar ==, se acaba el stack, usar === porque php es mamon
+                        $nNoti++;//si es otra notificacion del mismo inmueble, las agrupa mostrando solamente el numero de notificaciones de ese inmueble
+                        continue;
+                    } //else ...
+
+                    $mensaje= User::generaNotificacionClientesPot($nNoti, $inmuebleAct);
+                    if($mensaje!=null){
+                        $notificaciones[]=new Notificacion($mensaje, Notificacion::CLIENTE_POTENCIAL, $inmuebleAct);
+                    }
+                    $inmuebleAct=$inm;
+                    $nNoti=1;
+                }
+            }else{
+                $mensaje= "El usuario ". $arrendador->get("username")." ha decidido ponerce en contacto contigo para la ".
+                        " negociacion de la casa que solicitaste que se encuentra en "
+                        .$inm->get("direccion")." contactalo a este correo: ".$arrendador->get("email") .". <br>";
+                echo $mensaje; 
+                $notificaciones[]= new Notificacion($mensaje, Notificacion::CONTACTO_ARRENDADOR, $inm);
+            }
         }
-        return $res;
+        $mensaje= User::generaNotificacionClientesPot($nNoti, $inmuebleAct);
+        if($mensaje!=null){
+            $notificaciones[]=new Notificacion($mensaje, Notificacion::CLIENTE_POTENCIAL, $inmuebleAct);
+        }
+        return $notificaciones;
+    }
+    private static function generaNotificacionClientesPot($numNoti, $inmueble){
+        if ($numNoti == 0) {
+            return null;
+        } //si no hay notificaciones se salta lo demas
+        $mensaje="Tienes ". $numNoti;
+        if($numNoti==1){
+            $mensaje.=" cliente potencial!";
+        }else $mensaje.=" clientes potenciales! ";
+        
+        $mensaje.="estan esperando por comprar/rentar tu casa ubicada en "
+                . $inmueble->get("direccion").".<br>";
+        echo $mensaje;
+        return $mensaje;
     }
     /**
      * Autoriza el contacto con las personas que se interesen por la compra o
@@ -259,7 +315,7 @@ class User {
      * llamar este metodo cuando el usuario pague por ese inmueble en particular.
      * @param type $inmueble
      */
-    public function autorizarContacto($inmueble){
+    public static function autorizarContacto($inmueble){
         $arrendador= User::usuarioActual();
         if (!$arrendador->isAuthenticated()) {
             return false;
@@ -280,20 +336,12 @@ class User {
             $txt="Hola! " . $user->get("username"). ", Nos complase informarte que el usuario ". $arrendador->get("username")
                     ." ha desidido contactarse contigo y llegar a un acuerdo para la venta/renta de su casa ubicada en "
                     .$inmueble->get("direccion").". Puedes ponerte en contacto con el a traves de este correo: "
-                    .$arrendador->get("email");
+                    .$arrendador->get("email").".";
             User::enviarNotificacion($mail,$asunto,$txt);
             echo "se envio correo informativo a ". $mail. " con el contenido: <br>". $txt." <br>";
             $res[$i]->set("validado", true);
             $res[$i]->save();
         }
-    }
-    /**
-     * Devuelve todas las personas con las que se ha contactado, ya sea con clientes
-     * o con otros arrendadores.
-     * @param type $usuario
-     */
-    public function getContactos($usuario){
-        
     }
 }
 class Inmueble {
@@ -338,9 +386,11 @@ class Inmueble {
             $resp[]=$imag->getUrl();
             //echo "<img src= " . $imag->getUrl(). " > <br>";
         }
-        for($i=0;$i< $fin;$i++){
+        /*for($i=0;$i< $fin;$i++){
             echo "<img src= " . $resp[$i]. " > <br>";
-        }
+            //echo $resp[$i]." <br>";
+        }*/
+        return $resp[$i];
     }
     public function getImagenInmueble($inmueble){
         $relation =  $inmueble ->getRelation("imagenes");
@@ -350,4 +400,31 @@ class Inmueble {
         return $imag->getUrl();
     }
     
+}
+class Notificacion {
+    /**
+     * El mensaje que contiene la notificacion, es el que se le mostrara al usuario.
+     * @var type string
+     */
+    public $mensaje;
+    /**
+     * Es el tipo de notificacion, puede ser 1 para contacto nuevo  (cuando un arrendador pago la cuota, 
+     * y ya tiene clientes, habra una notificacion por cada cliente), 2 para cliente potencial
+     * (cuando 1 o varios usuarios quieren comprar/rentar tu casa pero no has pagado la cuota, debe de salir un boton para pagarla)
+     * y 3 para contacto con el arrendador establecido (Cuando quieres comprar una casa 
+     * y el arrendador ya pago la cuota y libero sus datos, te llega la notificacion con sus datos).
+     * @var int
+     */
+    public $tipo;
+    const CONTACTO_NUEVO=1;
+    const CLIENTE_POTENCIAL=2;
+    const CONTACTO_ARRENDADOR=3;
+    
+    public $inmueble;
+    
+    public function __construct($message, $tip, $inm=null){
+        $this->mensaje = $message;
+        $this->tipo= $tip;
+        $this->inmueble= $inm;
+    }
 }

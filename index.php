@@ -43,11 +43,11 @@ and open the template in the editor.
             //$objeto->destroy();
             
             muestraUsuarios();
-            //calificaUsuario(); innercircle1
-            //getCalificacionUsuario(); luzvivanco1#
+            //calificaUsuario(); //innercircle1
+            //getCalificacionUsuario(); //luzvivanco1#
             //solicitaCasa();
-            getImagenesInmuebles();
-            //notificacionesArrendador();
+            //getImagenesInmuebles();
+            notificaciones();
             //autorizarContactos();
             function autorizarContactos(){
                 iniciaSesion();
@@ -55,24 +55,36 @@ and open the template in the editor.
                 $inmueble = $query->get("ECBYtmXxj6");
                 User::autorizarContacto($inmueble);
             }
-            function notificacionesArrendador(){
+            function notificaciones(){
                 $query = new ParseQuery("_User");
-                $user= $query->get("LLLdzjvZ44"); 
-                User::getNotificacionesArrendador($user);
+                $user= $query->get("LLLdzjvZ44");//ivan X8gPmNBW1R
+                $notificaciones=User::getNotificaciones($user); //LLLdzjvZ44 yo
+                $fin=count($notificaciones);
+                echo "Notificaciones:<br>";
+                for($i=0;$i<$fin;$i++){
+                    if($notificaciones[$i]->tipo == Notificacion::CONTACTO_NUEVO){
+                        echo "Contacto nuevo!<br>".$notificaciones[$i]->mensaje;
+                    }else if($notificaciones[$i]->tipo == Notificacion::CLIENTE_POTENCIAL){
+                        echo "Cliente potencial!(aqui hay que poner un boton para que pague)<br>".$notificaciones[$i]->mensaje;
+                    }else {
+                        echo "Contacto con el arrendador!<br>".$notificaciones[$i]->mensaje;
+                    }
+                }
             }
             function solicitaCasa(){
                 $query = new ParseQuery("Inmueble");
-                $inmueble = $query->get("ECBYtmXxj6");
+                $inmueble = $query->get("Y713cZ9ZQk");
                 $query = new ParseQuery("_User");
-                $user= $query->get("p4Zy5A64pY"); 
+                $user= $query->get("LLLdzjvZ44"); 
+                echo "<br>Solicitando casa: <br>";
                 $resp= User::usuarioSolicitaCasa($user, $inmueble);
-                echo $resp;
+                echo $resp."<br>";
             }
             function guardaImagenRelacion(){
                 $consulta= new ParseQuery("Inmueble");
                 $inmueble = $consulta->get("Wkz7fvW6qG");
                 $consulta= new ParseQuery("Imagenes");
-                $imagen= $consulta->first();        
+                $imagen= $consulta->first();
                 $relacion= $inmueble->getRelation("imagenes");
                 $relacion->add($imagen);
                 $inmueble->save();
